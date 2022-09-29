@@ -55,9 +55,6 @@ def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
     если явно передать 0 (ноль) - берётся вся база, что есть по path_events_src
     """
     df_cities = spark.read.parquet(path_cities_src)
-    print("df_cities")
-    df_cities.show()
-    df_cities.printSchema()
 
     if deep_days > 0:
         # под юпитер в master=local можно отработать
@@ -74,10 +71,6 @@ def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
         print(path_events_src)
         df_events = spark.read.parquet(path_events_src)
 
-    print("df_events")
-    df_events.show()
-    df_events.printSchema()
-
     window = Window.partitionBy("event_id").orderBy(F.asc("diff"))
     df_cross = df_events \
         .filter(F.col("lat").isNotNull() & F.col("lon").isNotNull()) \
@@ -92,7 +85,6 @@ def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
         .drop("id", "city", "lng", "diff") \
         .distinct() \
         .persist()
-    df_cross.show()
 
     return df_cross
 
@@ -199,9 +191,6 @@ def main():
 
     # строим DataFrame user_id | act_city | act_city_event_ts | home_city
     dfCohortsByDate = makeCohortsByDate(dfEvents)
-    print("dfCohortsByDate")
-    dfCohortsByDate.show()
-    dfCohortsByDate.printSchema()
 
     window_last_home = Window.partitionBy("user_id", "event_city") \
                         .orderBy(F.desc("grp_start_date")) \
@@ -215,18 +204,12 @@ def main():
             F.first("event_city", True).over(window_last_home)) \
         .drop("event_city", "grp_start_date", "city_serial_dates_count") \
         .distinct()
-    print("dfHomes")
-    dfHomes.show()
-    dfHomes.printSchema()
 
     dfHomeAndAct = dfCohortsByDate \
         .select("user_id", "act_city", "act_city_event_ts") \
         .distinct() \
         .join(dfHomes, "user_id", "left") \
         .orderBy(F.col("home_city").asc_nulls_last(), F.col("act_city").asc())
-    print("dfHomeAndAct")
-    dfHomeAndAct.show()
-    dfHomeAndAct.printSchema()
 
     # добавляем в DataFrame travel_count | travel_array
 
@@ -235,9 +218,6 @@ def main():
     # по event.message_ts, так как в одну дату австралиец
     # может посетить не один город
     dfSeriesByTs = makeSeriesByTs(dfEvents)
-    print("dfSeriesByTs")
-    dfSeriesByTs.show()
-    dfSeriesByTs.printSchema()
 
     win_prev_city = Window.partitionBy("user_id") \
                         .orderBy(F.asc("event_ts"))
@@ -264,9 +244,6 @@ def main():
         ) \
         .distinct() \
         .orderBy(F.col("travel_count").desc(), F.col("user_id").asc())
-    print("dfTravels")
-    dfTravels.show(20, False)
-    dfTravels.printSchema()
 
     # добавляем в витрину local_time.
     # тут не очень понятно. у нас в витрине всё сто раз агрегировано,
@@ -335,18 +312,15 @@ def main():
             ) \
             .drop("act_city_event_ts", "city", "tz") \
             .orderBy(F.col("user_id").asc())
-    print("dfMart")
-    dfMart.show(100, False)
-    dfMart.printSchema()
 
     dfMart.write \
         .mode("overwrite") \
         .parquet(path_target)
 
-    dfTestRead = spark.read.parquet(path_target)
-    print("dfTestRead")
-    dfTestRead.show()
-    dfTestRead.printSchema()
+    # dfTestRead = spark.read.parquet(path_target)
+    # print("dfTestRead")
+    # dfTestRead.show()
+    # dfTestRead.printSchema()
 
 if __name__ == "__main__":
     main()
