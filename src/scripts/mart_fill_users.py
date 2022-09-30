@@ -29,7 +29,7 @@ import pyspark.sql.functions as F
 from pyspark import SparkFiles
 
 
-def generate_dates_decrease(date, depth, base_path):
+def generate_dates_increase(date, depth, base_path):
     start_date = datetime.strptime(date, "%Y-%m-%d")
     for n in range(depth):
         Ymd = (start_date + timedelta(n)).strftime("%Y-%m-%d")
@@ -38,7 +38,7 @@ def generate_dates_decrease(date, depth, base_path):
 
 
 def input_paths(date, depth, base_path):
-    return tuple(generate_dates_decrease(date, depth, base_path))
+    return tuple(generate_dates_increase(date, depth, base_path))
 
 
 def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
@@ -173,7 +173,7 @@ def main():
     home_days = int(sys.argv[4]) # 7 (по ТЗ 27, но см. на пред. параметр)
     path_target = sys.argv[5] # '/user/sergeibara/analytics/mart_users'
 
-    spark_app_name = f"mart_fill_users_cell"
+    spark_app_name = f"mart_fill_users_{deep_days}_{home_days}"
     # .master("yarn") \
     # .master("local[8]") \
     # .master("local") \

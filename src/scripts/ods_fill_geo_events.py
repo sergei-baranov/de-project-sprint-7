@@ -47,8 +47,8 @@ def stageEventsToOds(spark, path_src, path_target):
 
 
 def main():
-    path_src = sys.argv[1] # "/user/master/data/geo/events"
-    path_target = sys.argv[2] # "/user/sergeibara/data/geo/events"
+    path_src = sys.argv[1] # '/user/master/data/geo/events'
+    path_target = sys.argv[2] # '/user/sergeibara/data/geo/events'
 
     spark_app_name = f"ods_fill_geo_events"
     # .master("yarn") \

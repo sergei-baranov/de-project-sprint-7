@@ -22,7 +22,7 @@ import pyspark.sql.functions as F
 from pyspark import SparkFiles
 
 
-def generate_dates_decrease(date, depth, base_path):
+def generate_dates_increase(date, depth, base_path):
     start_date = datetime.strptime(date, "%Y-%m-%d")
     for n in range(depth):
         Ymd = (start_date + timedelta(n)).strftime("%Y-%m-%d")
@@ -31,7 +31,7 @@ def generate_dates_decrease(date, depth, base_path):
 
 
 def input_paths(date, depth, base_path):
-    return tuple(generate_dates_decrease(date, depth, base_path))
+    return tuple(generate_dates_increase(date, depth, base_path))
 
 
 def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
@@ -48,6 +48,7 @@ def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
     если явно передать 0 (ноль) - берётся вся база, что есть по path_events_src
     """
     df_cities = spark.read.parquet(path_cities_src)
+
     print("df_cities")
     df_cities.show()
     df_cities.printSchema()
@@ -71,7 +72,7 @@ def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
     df_events.show()
     df_events.printSchema()
 
-    window = Window.partitionBy("event_id").orderBy(F.asc("diff"))
+    window_city = Window.partitionBy("event_id").orderBy(F.asc("diff"))
     df_cross = df_events \
         .filter(F.col("lat").isNotNull() & F.col("lon").isNotNull()) \
         .withColumn('event_id', F.monotonically_increasing_id()) \
@@ -80,7 +81,7 @@ def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
             'diff',
             F.acos(F.sin(df_cities.lat)*F.sin(df_events.lat) + F.cos(df_cities.lat)*F.cos(df_events.lat)*F.cos(df_cities.lng-df_events.lon)) * F.lit(6371)
         ) \
-        .withColumn('event_city', F.first('city', True).over(window)) \
+        .withColumn('event_city', F.first('city', True).over(window_city)) \
         .drop(df_cities.lat) \
         .drop("id", "city", "lng", "diff") \
         .distinct() \
@@ -175,7 +176,7 @@ def main():
     home_days = 7 # int(sys.argv[4])
     path_target = '/user/sergeibara/analytics/mart_users' # sys.argv[5]
 
-    spark_app_name = f"mart_fill_users_cell"
+    spark_app_name = f"mart_fill_users_cell_{deep_days}_{home_days}"
     # .master("yarn") \
     # .master("local[8]") \
     # .master("local") \
