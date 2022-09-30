@@ -4,9 +4,9 @@
 # export JAVA_HOME='/usr'
 # export SPARK_HOME='/usr/lib/spark'
 # export PYTHONPATH='/usr/local/lib/python3.8'
-# /usr/lib/spark/bin/spark-submit --master yarn --deploy-mode cluster ods_fill_geo_cities.py 'https://code.s3.yandex.net/data-analyst/data_engeneer/geo.csv' '/user/sergeibara/data/geo/cities'
-# но запуск с yarn и cluster нифина не работает, поэтому:
-# /usr/lib/spark/bin/spark-submit --master local[8] --deploy-mode client ods_fill_geo_cities.py 'https://code.s3.yandex.net/data-analyst/data_engeneer/geo.csv' '/user/sergeibara/data/geo/cities'
+# spark-submit --master yarn --deploy-mode cluster ods_fill_geo_cities.py 'https://code.s3.yandex.net/data-analyst/data_engeneer/geo.csv' '/user/sergeibara/data/geo/cities'
+# но запуск с yarn и cluster не особо работает, поэтому:
+# spark-submit --master local[8] --deploy-mode client ods_fill_geo_cities.py 'https://code.s3.yandex.net/data-analyst/data_engeneer/geo.csv' '/user/sergeibara/data/geo/cities'
 import findspark
 findspark.init()
 findspark.find()

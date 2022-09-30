@@ -4,9 +4,9 @@
 # export JAVA_HOME='/usr'
 # export SPARK_HOME='/usr/lib/spark'
 # export PYTHONPATH='/usr/local/lib/python3.8'
-# /usr/lib/spark/bin/spark-submit --master yarn --deploy-mode cluster ods_fill_geo_events.py '/user/master/data/geo/events' '/user/sergeibara/data/geo/events'
-# но запуск с yarn и cluster нифина не работает, поэтому:
-# /usr/lib/spark/bin/spark-submit --master local[8] --deploy-mode client ods_fill_geo_events.py '/user/master/data/geo/events' '/user/sergeibara/data/geo/events'
+# spark-submit --master yarn --deploy-mode cluster ods_fill_geo_events.py '/user/master/data/geo/events' '/user/sergeibara/data/geo/events'
+# но запуск с yarn и cluster не особо работает, поэтому:
+# spark-submit --master local[8] --deploy-mode client ods_fill_geo_events.py '/user/master/data/geo/events' '/user/sergeibara/data/geo/events'
 import findspark
 findspark.init()
 findspark.find()
@@ -31,6 +31,10 @@ from pyspark import SparkFiles
 
 
 def stageEventsToOds(spark, path_src, path_target):
+    """
+    Переливаем из path_src sample(0.05) данных
+    в path_target, партиционируя по "date", "event_type"
+    """
     df = spark.read.parquet(path_src).sample(0.05)
     print("read job is done")
     df.write \

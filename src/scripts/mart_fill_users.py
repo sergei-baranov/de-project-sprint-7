@@ -4,9 +4,9 @@
 # export JAVA_HOME='/usr'
 # export SPARK_HOME='/usr/lib/spark'
 # export PYTHONPATH='/usr/local/lib/python3.8'
-# /usr/lib/spark/bin/spark-submit --master yarn --deploy-mode cluster mart_fill_users.py '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' 0 27 '/user/sergeibara/analytics/mart_users'
-# но запуск с yarn и cluster нифина не работает, поэтому:
-# /usr/lib/spark/bin/spark-submit --master local[8] --deploy-mode client mart_fill_users.py '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' 99 7 '/user/sergeibara/analytics/mart_users'
+# spark-submit --master yarn --deploy-mode cluster mart_fill_users.py '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' 0 27 '/user/sergeibara/analytics/mart_users'
+# но запуск с yarn и cluster не особо работает, поэтому:
+# spark-submit --master local[8] --deploy-mode client mart_fill_users.py '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' 66 7 '/user/sergeibara/analytics/mart_users'
 from datetime import datetime, date, timedelta
 import os
 os.environ['HADOOP_CONF_DIR'] = '/etc/hadoop/conf'
@@ -169,8 +169,8 @@ def main():
     """
     path_events_src = sys.argv[1] # '/user/sergeibara/data/geo/events'
     path_cities_src = sys.argv[2] # '/user/sergeibara/data/geo/cities'
-    deep_days = sys.argv[3] # 99 (0 для полной отработки)
-    home_days = sys.argv[4] # 7 (по ТЗ 27, но см. на пред. параметр)
+    deep_days = int(sys.argv[3]) # 66 (0 для полной отработки)
+    home_days = int(sys.argv[4]) # 7 (по ТЗ 27, но см. на пред. параметр)
     path_target = sys.argv[5] # '/user/sergeibara/analytics/mart_users'
 
     spark_app_name = f"mart_fill_users_cell"

@@ -23,6 +23,10 @@ from pyspark import SparkFiles
 
 
 def stageEventsToOds(spark, path_src, path_target):
+    """
+    Переливаем из path_src sample(0.05) данных
+    в path_target, партиционируя по "date", "event_type"
+    """
     df = spark.read.parquet(path_src).sample(0.05)
     print("read job is done")
     df.write \
@@ -35,8 +39,8 @@ def stageEventsToOds(spark, path_src, path_target):
 
 
 def main():
-    path_src = "/user/master/data/geo/events" # sys.argv[1]
-    path_target = "/user/sergeibara/data/geo/events" # sys.argv[2]
+    path_src = '/user/master/data/geo/events' # sys.argv[1]
+    path_target = '/user/sergeibara/data/geo/events' # sys.argv[2]
 
     spark_app_name = f"ods_fill_geo_events_cell"
     # .master("yarn") \

@@ -62,8 +62,8 @@ def stageGeoToOds(spark, path_src_url, path_target):
 
 
 def main():
-    path_src_url = "https://code.s3.yandex.net/data-analyst/data_engeneer/geo.csv" # sys.argv[1]
-    path_target = "/user/sergeibara/data/geo/cities" # sys.argv[2]
+    path_src_url = 'https://code.s3.yandex.net/data-analyst/data_engeneer/geo.csv' # sys.argv[1]
+    path_target = '/user/sergeibara/data/geo/cities' # sys.argv[2]
 
     spark_app_name = f"ods_fill_geo_cities_cell"
     # .master("yarn") \

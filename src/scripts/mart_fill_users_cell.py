@@ -169,11 +169,11 @@ def main():
     для теста вполне норм работает 66 и 7 например (но это на sample(0.05)).
     """
     # NB: в spark-submit версии вернуть параметризацию из аргументов запуска
-    path_events_src = "/user/sergeibara/data/geo/events" # sys.argv[1]
-    path_cities_src = "/user/sergeibara/data/geo/cities" # sys.argv[2]
-    deep_days = 99 # sys.argv[3]
-    home_days = 7 # sys.argv[4]
-    path_target = "/user/sergeibara/analytics/mart_users" # sys.argv[5]
+    path_events_src = '/user/sergeibara/data/geo/events' # sys.argv[1]
+    path_cities_src = '/user/sergeibara/data/geo/cities' # sys.argv[2]
+    deep_days = 66 # int(sys.argv[3])
+    home_days = 7 # int(sys.argv[4])
+    path_target = '/user/sergeibara/analytics/mart_users' # sys.argv[5]
 
     spark_app_name = f"mart_fill_users_cell"
     # .master("yarn") \
