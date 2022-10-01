@@ -76,7 +76,7 @@ def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
     если явно передать 0 (ноль) - берётся вся база, что есть по path_events_src
     """
 
-    log.makeDfEventsWithCities("main: '{}', '{}', '{}'".format(
+    log.info("main: '{}', '{}', '{}'".format(
         path_events_src, path_cities_src, deep_days
     ))
 
