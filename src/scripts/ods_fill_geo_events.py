@@ -4,9 +4,9 @@
 # export JAVA_HOME='/usr'
 # export SPARK_HOME='/usr/lib/spark'
 # export PYTHONPATH='/usr/local/lib/python3.8'
-# spark-submit --master yarn --deploy-mode cluster ods_fill_geo_events.py '/user/master/data/geo/events' '/user/sergeibara/data/geo/events'
+# /usr/lib/spark/bin/spark-submit --master yarn --deploy-mode cluster ods_fill_geo_events.py '/user/master/data/geo/events' '/user/sergeibara/data/geo/events'
 # но запуск с yarn и cluster не особо работает, поэтому:
-# spark-submit --master local[8] --deploy-mode client ods_fill_geo_events.py '/user/master/data/geo/events' '/user/sergeibara/data/geo/events'
+# /usr/lib/spark/bin/spark-submit --master local[8] --deploy-mode client ods_fill_geo_events.py '/user/master/data/geo/events' '/user/sergeibara/data/geo/events'
 import findspark
 findspark.init()
 findspark.find()
