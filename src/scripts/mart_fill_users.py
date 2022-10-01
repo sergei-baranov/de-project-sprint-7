@@ -28,8 +28,20 @@ from pyspark.sql.window import Window
 import pyspark.sql.functions as F
 from pyspark import SparkFiles
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def generate_dates_increase(date, depth, base_path):
+    """
+    для ограничения работы по глубине формируем пути;
+    это генератор
+    """
+
+    log.info("generate_dates_increase: '{}', '{}', '{}'".format(
+        date, depth, base_path
+    ))
+
     start_date = datetime.strptime(date, "%Y-%m-%d")
     for n in range(depth):
         Ymd = (start_date + timedelta(n)).strftime("%Y-%m-%d")
@@ -38,6 +50,15 @@ def generate_dates_increase(date, depth, base_path):
 
 
 def input_paths(date, depth, base_path):
+    """
+    для ограничения работы по глубине формируем пути;
+    это оболочка к генератору
+    """
+
+    log.info("generate_dates_increase: '{}', '{}', '{}'".format(
+        date, depth, base_path
+    ))
+
     return tuple(generate_dates_increase(date, depth, base_path))
 
 
@@ -54,13 +75,18 @@ def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
     не всю базу, а только deep_days от 2022-01-01;
     если явно передать 0 (ноль) - берётся вся база, что есть по path_events_src
     """
+
+    log.makeDfEventsWithCities("main: '{}', '{}', '{}'".format(
+        path_events_src, path_cities_src, deep_days
+    ))
+
     df_cities = spark.read.parquet(path_cities_src)
 
     if deep_days > 0:
         # под юпитер в master=local можно отработать
         # минимально достаточное для тз количество дней
         events_pathes = input_paths('2022-01-01', deep_days, path_events_src)
-        print(events_pathes[0] + "..." + events_pathes[-1])
+        # print(events_pathes[0] + "..." + events_pathes[-1])
 
         df_events = spark.read \
                         .option("basePath", path_events_src) \
@@ -68,7 +94,7 @@ def makeDfEventsWithCities(spark: pyspark.sql.SparkSession,
     else:
         # в варианте под работающий (!) spark-submit --master yarn
         # передаём в deep_days 0 (ноль)
-        print(path_events_src)
+        # print(path_events_src)
         df_events = spark.read.parquet(path_events_src)
 
     window = Window.partitionBy("event_id").orderBy(F.asc("diff"))
@@ -98,6 +124,9 @@ def makeCohortsByDate(dfEvents: pyspark.sql.DataFrame) -> pyspark.sql.DataFrame:
     возвращает DataFrame с полями
     user_id | event_date | event_city | act_city | act_city_event_ts | grp_start_date
     """
+
+    log.info("makeCohortsByDate()")
+
     window_act_city = Window.partitionBy("user_id") \
                         .orderBy(F.desc("event.message_ts")) \
                         .rowsBetween(Window.unboundedPreceding, 1)
@@ -137,6 +166,9 @@ def makeSeriesByTs(dfEvents: pyspark.sql.DataFrame) -> pyspark.sql.DataFrame:
     для вычислений путешествий готовим DataFrame на три поля:
     user_id | event_ts | event_city
     """
+
+    log.info("makeSeriesByTs()")
+
     dfSeriesByTs = dfEvents \
         .withColumn("user_id", F.col("event.message_from")) \
         .withColumn("event_ts", F.col("event.message_ts")) \
@@ -167,11 +199,17 @@ def main():
     для прод-запуска указать 0 и 27 соответственно.
     для теста вполне норм работает 66 и 7 например (но это на sample(0.05)).
     """
+
     path_events_src = sys.argv[1] # '/user/sergeibara/data/geo/events'
     path_cities_src = sys.argv[2] # '/user/sergeibara/data/geo/cities'
     deep_days = int(sys.argv[3]) # 66 (0 для полной отработки)
     home_days = int(sys.argv[4]) # 7 (по ТЗ 27, но см. на пред. параметр)
     path_target = sys.argv[5] # '/user/sergeibara/analytics/mart_users'
+
+    log.info("main: '{}', '{}', '{}', '{}', '{}'".format(
+        path_events_src, path_cities_src, deep_days,
+        home_days, path_target
+    ))
 
     spark_app_name = f"mart_fill_users_{deep_days}_{home_days}"
     # .master("yarn") \

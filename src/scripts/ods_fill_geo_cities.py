@@ -29,8 +29,19 @@ from pyspark.sql.window import Window
 import pyspark.sql.functions as F
 from pyspark import SparkFiles
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def stageGeoToOds(spark, path_src_url, path_target):
+    """
+    поучился в спарке читать датафрейм из http[s]- источника
+    """
+
+    log.info("stageEventsToOds: '{}', '{}'".format(
+        path_src_url, path_target
+    ))
+
     geoSchemaRus = StructType([
         StructField("id", LongType(), nullable=False),
         StructField("city", StringType(), nullable=False),
@@ -65,8 +76,16 @@ def stageGeoToOds(spark, path_src_url, path_target):
 
 
 def main():
+    """
+    поучился в спарке читать датафрейм из http[s]- источника
+    """
+
     path_src_url = sys.argv[1] # 'https://code.s3.yandex.net/data-analyst/data_engeneer/geo.csv'
     path_target = sys.argv[2] # '/user/sergeibara/data/geo/cities'
+
+    log.info("stageEventsToOds: '{}', '{}'".format(
+        path_src_url, path_target
+    ))
 
     spark_app_name = f"ods_fill_geo_cities"
     # .master("yarn") \

@@ -30,8 +30,20 @@ from pyspark.sql.window import Window
 import pyspark.sql.functions as F
 from pyspark import SparkFiles
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def generate_dates_increase(date, depth, base_path):
+    """
+    для ограничения работы по глубине формируем пути;
+    это генератор
+    """
+
+    log.info("generate_dates_increase: '{}', '{}', '{}'".format(
+        date, depth, base_path
+    ))
+
     start_date = datetime.strptime(date, "%Y-%m-%d")
     for n in range(depth):
         Ymd = (start_date + timedelta(n)).strftime("%Y-%m-%d")
@@ -40,6 +52,15 @@ def generate_dates_increase(date, depth, base_path):
 
 
 def input_paths(date, depth, base_path):
+    """
+    для ограничения работы по глубине формируем пути;
+    это оболочка к генератору
+    """
+
+    log.info("generate_dates_increase: '{}', '{}', '{}'".format(
+        date, depth, base_path
+    ))
+
     return tuple(generate_dates_increase(date, depth, base_path))
 
 
@@ -68,6 +89,11 @@ def makeDfEventsSheet(spark: pyspark.sql.SparkSession,
     не всю базу, а только deep_days от 2022-01-01;
     если явно передать 0 (ноль) - берётся вся база, что есть по path_events_src
     """
+
+    log.info("makeDfEventsSheet: '{}', '{}', '{}', '{}'".format(
+        path_events_src, path_cities_src, path_mart_users_src, deep_days
+    ))
+
     df_cities = spark.read.parquet(path_cities_src)
     df_users = spark.read.parquet(path_mart_users_src)
 
@@ -75,7 +101,7 @@ def makeDfEventsSheet(spark: pyspark.sql.SparkSession,
         # под юпитер в master=local можно отработать
         # минимально достаточное для тз количество дней
         events_pathes = input_paths('2022-01-01', deep_days, path_events_src)
-        print(events_pathes[0] + "..." + events_pathes[-1])
+        # print(events_pathes[0] + "..." + events_pathes[-1])
 
         df_events = spark.read \
                         .option("basePath", path_events_src) \
@@ -83,7 +109,7 @@ def makeDfEventsSheet(spark: pyspark.sql.SparkSession,
     else:
         # в варианте под работающий (!) spark-submit --master yarn
         # передаём в deep_days 0 (ноль)
-        print(path_events_src)
+        # print(path_events_src)
         df_events = spark.read.parquet(path_events_src)
 
     # в данном случае будет asc_nulls_first,
@@ -176,11 +202,17 @@ def main():
     для прод-запуска указать 0?
     для теста вполне норм работает 66 например (но это на sample(0.05)).
     """
+
     path_events_src = sys.argv[1] # '/user/sergeibara/data/geo/events'
     path_cities_src = sys.argv[2] # '/user/sergeibara/data/geo/cities'
     path_mart_users_src = sys.argv[3] # '/user/sergeibara/analytics/mart_users'
     deep_days = int(sys.argv[4]) # 66
     path_target = sys.argv[5] # '/user/sergeibara/analytics/mart_zones'
+
+    log.info("main: '{}', '{}', '{}', '{}', '{}'".format(
+        path_events_src, path_cities_src, path_mart_users_src,
+        deep_days, path_target
+    ))
 
     spark_app_name = f"mart_fill_zones_{deep_days}"
     # .master("yarn") \

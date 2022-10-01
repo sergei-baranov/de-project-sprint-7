@@ -33,6 +33,15 @@ log = logging.getLogger(__name__)
 
 
 def generate_dates_increase(date, depth, base_path):
+    """
+    для ограничения работы по глубине формируем пути;
+    это оболочка к генератору
+    """
+
+    log.info("generate_dates_increase: '{}', '{}', '{}'".format(
+        date, depth, base_path
+    ))
+
     start_date = datetime.strptime(date, "%Y-%m-%d")
     for n in range(depth):
         Ymd = (start_date + timedelta(n)).strftime("%Y-%m-%d")
@@ -41,6 +50,15 @@ def generate_dates_increase(date, depth, base_path):
 
 
 def input_paths(date, depth, base_path):
+    """
+    для ограничения работы по глубине формируем пути;
+    это оболочка к генератору
+    """
+
+    log.info("generate_dates_increase: '{}', '{}', '{}'".format(
+        date, depth, base_path
+    ))
+
     return tuple(generate_dates_increase(date, depth, base_path))
 
 
@@ -56,18 +74,19 @@ def makeDfEvents(spark: pyspark.sql.SparkSession,
 
     event_id | processed_dttm | user_id | lat | lon | event_type | user_to_id | channel_id
     """
-    log.info("path_events_src: {}".format(
-        path_events_src
+
+    log.info("makeDfEvents: {}, {}".format(
+        path_events_src, deep_days
     ))
 
     if deep_days > 0:
         # под юпитер в master=local можно отработать
         # минимально достаточное для тз количество дней
         events_pathes = input_paths('2022-01-01', deep_days, path_events_src)
-        msg = "events_pathes: {}...{}".format(
+        msg = "events_pathes: a{}...{}".format(
             events_pathes[0], events_pathes[-1]
         )
-        print(msg)
+        # print(msg)
         log.info(msg)
 
         df_events = spark.read \
@@ -140,6 +159,10 @@ def makeDfUsersWithCoords(spark: pyspark.sql.SparkSession,
     user_id | processed_dttm | lat | lon | city
     """
 
+    log.info("makeDfUsersWithCoords: '{}', '{}'".format(
+        df_base, path_cities_src
+    ))
+
     df_cities = spark.read.parquet(path_cities_src)
 
     window_city = Window.partitionBy("event_id").orderBy(F.asc("diff"))
@@ -180,6 +203,10 @@ def makeDfUsersWithChannels(spark: pyspark.sql.SparkSession,
     user_id | channel_id
     """
 
+    log.info("makeDfUsersWithChannels: '{}'".format(
+        df_base
+    ))
+
     #channel_admins_path = '/user/master/data/snapshots/channel_admins/actual'
     #channel_admins = sql.read.parquet(channel_admins_path)
 
@@ -208,6 +235,10 @@ def makeDfUsersWithAddressees(spark: pyspark.sql.SparkSession,
 
     Пары формирую специально так, чтобы user_left был меньше user_right
     """
+
+    log.info("makeDfUsersWithAddressees: '{}'".format(
+        df_base
+    ))
 
     # в user_left пишу сразу меньший ид, так как я далее
     # удаляю дублирующиеся пары через filter(left < right),
@@ -252,11 +283,17 @@ def main():
     Для теста работает 50 например.
     Для прод-а указать 1, согласно ТЗ.
     """
+
     path_events_src = sys.argv[1] # '/user/sergeibara/data/geo/events'
     path_cities_src = sys.argv[2] # '/user/sergeibara/data/geo/cities'
     deep_days = int(sys.argv[3]) # 14
     nextdoor_kilometers = int(sys.argv[4]) # 50
     path_target = sys.argv[5] # '/user/sergeibara/analytics/mart_friends'
+
+    log.info("main: '{}', '{}', '{}', '{}', '{}'".format(
+        path_events_src, path_cities_src, deep_days,
+        nextdoor_kilometers, path_target
+    ))
 
     spark_app_name = f"mart_fill_friends_{deep_days}"
     # .master("yarn") \

@@ -29,19 +29,25 @@ from pyspark.sql.window import Window
 import pyspark.sql.functions as F
 from pyspark import SparkFiles
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def stageEventsToOds(spark, path_src, path_target):
     """
     Переливаем из path_src sample(0.05) данных
     в path_target, партиционируя по "date", "event_type"
     """
+
+    log.info("stageEventsToOds: '{}', '{}'".format(
+        path_src, path_target
+    ))
+
     df = spark.read.parquet(path_src).sample(0.05)
-    print("read job is done")
     df.write \
             .partitionBy("date", "event_type") \
             .mode("overwrite") \
             .parquet(path_target)
-    print("write job is done")
 
     return path_target
 
@@ -49,6 +55,10 @@ def stageEventsToOds(spark, path_src, path_target):
 def main():
     path_src = sys.argv[1] # '/user/master/data/geo/events'
     path_target = sys.argv[2] # '/user/sergeibara/data/geo/events'
+
+    log.info("main: '{}', '{}'".format(
+        path_src, path_target
+    ))
 
     spark_app_name = f"ods_fill_geo_events"
     # .master("yarn") \
@@ -63,10 +73,10 @@ def main():
 
     saved_path = stageEventsToOds(spark, path_src, path_target)
 
-    print(f"done ({saved_path})")
-    df = spark.read.parquet(saved_path)
-    df.show()
-    df.printSchema()
+    # print(f"done ({saved_path})")
+    # df = spark.read.parquet(saved_path)
+    # df.show()
+    # df.printSchema()
 
 
 if __name__ == "__main__":
