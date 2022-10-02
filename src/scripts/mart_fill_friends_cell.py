@@ -1,6 +1,6 @@
 # mart_fill_friends_cell.py
 # NB: в spark-submit версии прописать комментами тут запуск из консоли
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 import os
 os.environ['HADOOP_CONF_DIR'] = '/etc/hadoop/conf'
 os.environ['YARN_CONF_DIR'] = '/etc/hadoop/conf'
@@ -8,7 +8,6 @@ os.environ['YARN_CONF_DIR'] = '/etc/hadoop/conf'
 # os.environ['SPARK_HOME'] ='/usr/lib/spark'
 # os.environ['PYTHONPATH'] ='/usr/local/lib/python3.8'
 
-import sys
 import findspark
 findspark.init()
 findspark.find()
@@ -19,7 +18,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import * 
 from pyspark.sql.window import Window
 import pyspark.sql.functions as F
-from pyspark import SparkFiles
 
 import logging
 log = logging.getLogger(__name__)
@@ -38,7 +36,7 @@ def input_paths(date, depth, base_path):
 
 
 def makeDfEvents(spark: pyspark.sql.SparkSession,
-            path_events_src: str, deep_days: int) -> pyspark.sql.DataFrame:
+                 path_events_src: str, deep_days: int) -> pyspark.sql.DataFrame:
     """
     Базовый датафрейм для всего остального.
     Для удобства и уменьшения места оставляем только необходимые для
@@ -64,8 +62,8 @@ def makeDfEvents(spark: pyspark.sql.SparkSession,
         log.info(msg)
 
         df_events = spark.read \
-                        .option("basePath", path_events_src) \
-                        .parquet(*events_pathes)
+                         .option("basePath", path_events_src) \
+                         .parquet(*events_pathes)
     else:
         # в варианте под работающий (!) spark-submit --master yarn
         # передаём в deep_days 0 (ноль)
@@ -96,16 +94,13 @@ def makeDfEvents(spark: pyspark.sql.SparkSession,
             F.when(
                 F.col("event.message_channel_to").isNotNull(),
                 F.col("event.message_channel_to")
-            ) \
-            .when(
+            ).when(
                 F.col("event.subscription_channel").isNotNull(),
                 F.col("event.subscription_channel")
-            ) \
-            .when(
+            ).when(
                 F.col("event.channel_id").isNotNull(),
                 F.col("event.channel_id")
-            ) \
-            .otherwise(F.lit(None))
+            ).otherwise(F.lit(None))
         ) \
         .select(
             "event_id",
@@ -122,8 +117,8 @@ def makeDfEvents(spark: pyspark.sql.SparkSession,
 
 
 def makeDfUsersWithCoords(spark: pyspark.sql.SparkSession,
-            df_base: pyspark.sql.DataFrame,
-            path_cities_src: str) -> pyspark.sql.DataFrame:
+                          df_base: pyspark.sql.DataFrame,
+                          path_cities_src: str) -> pyspark.sql.DataFrame:
     """
     Выбирает все квартеты "пользователь" + "дата" + "lat" + "lon"
     из всей совокупности событий.
@@ -153,7 +148,10 @@ def makeDfUsersWithCoords(spark: pyspark.sql.SparkSession,
         .crossJoin(df_cities) \
         .withColumn(
             'diff',
-            F.acos(F.sin(df_cities.lat)*F.sin(df_base.lat) + F.cos(df_cities.lat)*F.cos(df_base.lat)*F.cos(df_cities.lng-df_base.lon)) * F.lit(6371)
+            F.acos(
+                F.sin(df_cities.lat)*F.sin(df_base.lat)
+                + F.cos(df_cities.lat) * F.cos(df_base.lat) * F.cos(df_cities.lng - df_base.lon)
+            ) * F.lit(6371)
         ) \
         .withColumn('user_city', F.first('city', True).over(window_city)) \
         .select(
@@ -168,8 +166,7 @@ def makeDfUsersWithCoords(spark: pyspark.sql.SparkSession,
     return df_cross
 
 
-def makeDfUsersWithChannels(spark: pyspark.sql.SparkSession,
-            df_base: pyspark.sql.DataFrame) -> pyspark.sql.DataFrame:
+def makeDfUsersWithChannels(df_base: pyspark.sql.DataFrame) -> pyspark.sql.DataFrame:
     """
     Выбирает все уникальные двойки "пользователь" + "канал" из совокупности
     channel_id is not null.
@@ -181,8 +178,7 @@ def makeDfUsersWithChannels(spark: pyspark.sql.SparkSession,
     user_id | channel_id
     """
 
-    #channel_admins_path = '/user/master/data/snapshots/channel_admins/actual'
-    #channel_admins = sql.read.parquet(channel_admins_path)
+    log.info("makeDfUsersWithChannels()")
 
     df = df_base \
         .filter(F.col("channel_id").isNotNull()) \
@@ -192,11 +188,10 @@ def makeDfUsersWithChannels(spark: pyspark.sql.SparkSession,
         ) \
         .distinct()
 
-    return df;
+    return df
 
 
-def makeDfUsersWithAddressees(spark: pyspark.sql.SparkSession,
-            df_base: pyspark.sql.DataFrame) -> pyspark.sql.DataFrame:
+def makeDfUsersWithAddressees(df_base: pyspark.sql.DataFrame) -> pyspark.sql.DataFrame:
     """
     Выбирает все уникальные двойки "пользователь" + "адресат"
     из всей совокупности событий, у которых user_to_id is not null.
@@ -209,6 +204,8 @@ def makeDfUsersWithAddressees(spark: pyspark.sql.SparkSession,
 
     Пары формирую специально так, чтобы user_left был меньше user_right
     """
+
+    log.info("makeDfUsersWithAddressees()")
 
     # в user_left пишу сразу меньший ид, так как я далее
     # удаляю дублирующиеся пары через filter(left < right),
@@ -240,7 +237,7 @@ def makeDfUsersWithAddressees(spark: pyspark.sql.SparkSession,
         ) \
         .distinct()
 
-    return df;
+    return df
 
 
 def main():
@@ -253,18 +250,15 @@ def main():
     Для теста работает 50 например.
     Для прод-а указать 1, согласно ТЗ.
     """
-    # NB: в spark-submit версии вернуть параметризацию из аргументов запуска
-    path_events_src = '/user/sergeibara/data/geo/events' # sys.argv[1]
-    path_cities_src = '/user/sergeibara/data/geo/cities' # sys.argv[2]
-    deep_days = 14 # int(sys.argv[3])
-    nextdoor_kilometers = 50 # int(sys.argv[4])
-    path_target = '/user/sergeibara/analytics/mart_friends' # sys.argv[5]
+
+    path_events_src = '/user/sergeibara/data/geo/events'  # sys.argv[1]
+    path_cities_src = '/user/sergeibara/data/geo/cities'  # sys.argv[2]
+    deep_days = 14  # int(sys.argv[3])
+    nextdoor_kilometers = 50  # int(sys.argv[4])
+    path_target = '/user/sergeibara/analytics/mart_friends'  # sys.argv[5]
 
     spark_app_name = f"mart_fill_friends_cell_{deep_days}"
-    # .master("yarn") \
-    # .master("local[8]") \
-    # .master("local") \
-    # NB: в spark-submit-версии master задастся при отправке файла
+
     spark = SparkSession.builder \
         .master("local[8]") \
         .config("spark.driver.memory", "2g") \
@@ -272,28 +266,23 @@ def main():
         .appName(spark_app_name) \
         .getOrCreate()
 
-    # spark.stop()
-    # spark.catalog.clearCache()
-
     df_base = makeDfEvents(spark, path_events_src, deep_days)
+
     print("df_base")
     df_base.show()
     df_base.printSchema()
-
-    # print("df_base channel_id isNotNull")
-    # df_base.filter(F.col("channel_id").isNotNull()).show()
 
     df_coords = makeDfUsersWithCoords(spark, df_base, path_cities_src)
     print("df_coords")
     df_coords.show()
     df_coords.printSchema()
 
-    df_channels = makeDfUsersWithChannels(spark, df_base)
+    df_channels = makeDfUsersWithChannels(df_base)
     print("df_channels")
     df_channels.show()
     df_channels.printSchema()
 
-    df_friends = makeDfUsersWithAddressees(spark, df_base)
+    df_friends = makeDfUsersWithAddressees(df_base)
     print("df_friends")
     df_friends.show()
     df_friends.printSchema()
@@ -312,7 +301,7 @@ def main():
     # в них заранее left < right).
     #
     # Если бы не все записи были гарантированно парные,
-    # то было бы с удалением дуюлей тяжелее, как-то так:
+    # то было бы с удалением дублей тяжелее, как-то так:
     # .withColumn("dpl", 
     #     F.when(
     #         F.col("user_left") < F.col("user_right"),
@@ -343,7 +332,13 @@ def main():
         ) \
         .withColumn(
             'diff',
-            F.acos(F.sin(F.col("R.lat"))*F.sin(F.col("L.lat")) + F.cos(F.col("R.lat"))*F.cos(F.col("L.lat"))*F.cos(F.col("R.lon") - F.col("L.lon"))) * F.lit(6371)
+            F.acos(
+                F.sin(F.col("R.lat"))
+                * F.sin(F.col("L.lat"))
+                + F.cos(F.col("R.lat"))
+                * F.cos(F.col("L.lat"))
+                * F.cos(F.col("R.lon") - F.col("L.lon"))
+            ) * F.lit(6371)
         ) \
         .filter(F.col("diff") <= nextdoor_kilometers) \
         .select(
@@ -370,12 +365,11 @@ def main():
             (
                 (df_friends.user_left == df_nextdoors.user_left)
                 & (df_friends.user_right == df_nextdoors.user_right)
-            )
-            #| (
+            ),
+            # | (
             #    (df_friends.user_left == df_nextdoors.user_right)
             #    & (df_friends.user_right == df_nextdoors.user_left)
-            #)
-            ,
+            # )
             "left_anti"
         )
     print("df_not_friends")
@@ -438,12 +432,11 @@ def main():
             (
                 (df_not_friends.user_left == df_channels_pairs.user_left)
                 & (df_not_friends.user_right == df_channels_pairs.user_right)
-            )
-            #| (
+            ),
+            # | (
             #    (df_not_friends.user_left == df_channels_pairs.user_right)
             #    & (df_not_friends.user_right == df_channels_pairs.user_left)
-            #)
-            ,
+            # )
             "inner"
         ) \
         .drop(df_channels_pairs.user_left) \
@@ -457,10 +450,11 @@ def main():
         .mode("overwrite") \
         .parquet(path_target)
 
-    dfTestRead = spark.read.parquet(path_target)
+    d_test_read = spark.read.parquet(path_target)
     print("dfTestRead")
-    dfTestRead.show()
-    dfTestRead.printSchema()
+    d_test_read.show()
+    d_test_read.printSchema()
+
 
 if __name__ == "__main__":
     main()

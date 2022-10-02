@@ -19,7 +19,7 @@ default_args = {
 
 # DAG
 dag_spark = DAG(
-    dag_id="project_dag",
+    dag_id="project_dag_full",
     # запуск руками, т. к. учебный проект, учебная инфраструктура, etc.
     schedule_interval=None,
     default_args=default_args
@@ -33,6 +33,44 @@ init_phase = DummyOperator(
 finish_phase = DummyOperator(
     task_id='finish',
     dag=dag_spark
+)
+
+ods_fill_geo_cities_local = SparkSubmitOperator(
+    task_id='ods_fill_geo_cities',
+    dag=dag_spark,
+    application='/lessons/scripts/ods_fill_geo_cities.py',
+    conn_id='yarn_spark',
+    application_args=[
+        # STG path to read
+        'https://code.s3.yandex.net/data-analyst/data_engeneer/geo.csv',
+        # ODS path to write
+        '/user/sergeibara/data/geo/cities'
+    ],
+    conf={
+        # "master": "yarn",
+        "spark.driver.maxResultSize": "20g"
+    },
+    executor_cores=2,
+    executor_memory='2g'
+)
+
+ods_fill_geo_events_local = SparkSubmitOperator(
+    task_id='ods_fill_geo_events',
+    dag=dag_spark,
+    application='/lessons/scripts/ods_fill_geo_events.py',
+    conn_id='yarn_spark',
+    application_args=[
+        # STG path to read
+        '/user/master/data/geo/events',
+        # ODS path to write
+        '/user/sergeibara/data/geo/events'
+    ],
+    conf={
+        # "master": "yarn",
+        "spark.driver.maxResultSize": "20g"
+    },
+    executor_cores=2,
+    executor_memory='2g'
 )
 
 mart_fill_users_local = SparkSubmitOperator(
@@ -118,11 +156,14 @@ mart_fill_friends_local = SparkSubmitOperator(
     executor_memory='2g'
 )
 
-
-# это DAG чисто на витрины.
 # mart_fill_friends_local логически можно параллелить с mart_fill_zones_local
 # или mart_fill_users_local, но ресурс не позволит
+
 init_phase \
+    >> [
+        ods_fill_geo_events_local,
+        ods_fill_geo_cities_local
+    ] \
     >> mart_fill_users_local \
     >> mart_fill_zones_local \
     >> mart_fill_friends_local \

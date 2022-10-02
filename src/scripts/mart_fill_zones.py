@@ -4,19 +4,27 @@
 # export JAVA_HOME='/usr'
 # export SPARK_HOME='/usr/lib/spark'
 # export PYTHONPATH='/usr/local/lib/python3.8'
-# spark-submit --master yarn --deploy-mode cluster mart_fill_zones.py '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' '/user/sergeibara/analytics/mart_users' 0 '/user/sergeibara/analytics/mart_zones'
+# spark-submit --master yarn --deploy-mode cluster mart_fill_zones.py \
+# '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' \
+# '/user/sergeibara/analytics/mart_users' 0 '/user/sergeibara/analytics/mart_zones'
 # но запуск с yarn и cluster не особо работает, поэтому:
-# spark-submit --master local[8] --deploy-mode client mart_fill_zones.py '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' '/user/sergeibara/analytics/mart_users' 66 '/user/sergeibara/analytics/mart_zones'
-from datetime import datetime, date, timedelta
+# spark-submit --master local[8] --deploy-mode client mart_fill_zones.py \
+# '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' \
+# '/user/sergeibara/analytics/mart_users' 66 '/user/sergeibara/analytics/mart_zones'
+from datetime import datetime, timedelta
 import os
 os.environ['HADOOP_CONF_DIR'] = '/etc/hadoop/conf'
 os.environ['YARN_CONF_DIR'] = '/etc/hadoop/conf'
 # os.environ['JAVA_HOME']='/usr'
 # os.environ['SPARK_HOME'] ='/usr/lib/spark'
 # os.environ['PYTHONPATH'] ='/usr/local/lib/python3.8'
-# spark-submit --master yarn --deploy-mode cluster mart_fill_zones.py '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' '/user/sergeibara/analytics/mart_users' 66 '/user/sergeibara/analytics/mart_zones'
+# spark-submit --master yarn --deploy-mode cluster mart_fill_zones.py \
+# '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' \
+# '/user/sergeibara/analytics/mart_users' 66 '/user/sergeibara/analytics/mart_zones'
 # но запуск с yarn и cluster не особо работает, поэтому:
-# spark-submit --master local[8] --deploy-mode client mart_fill_zones.py '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' '/user/sergeibara/analytics/mart_users' 66 '/user/sergeibara/analytics/mart_zones'
+# spark-submit --master local[8] --deploy-mode client mart_fill_zones.py \
+# '/user/sergeibara/data/geo/events' '/user/sergeibara/data/geo/cities' \
+# '/user/sergeibara/analytics/mart_users' 66 '/user/sergeibara/analytics/mart_zones'
 import sys
 import findspark
 findspark.init()
@@ -28,7 +36,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import * 
 from pyspark.sql.window import Window
 import pyspark.sql.functions as F
-from pyspark import SparkFiles
 
 import logging
 log = logging.getLogger(__name__)
@@ -65,9 +72,9 @@ def input_paths(date, depth, base_path):
 
 
 def makeDfEventsSheet(spark: pyspark.sql.SparkSession,
-            path_events_src: str, path_cities_src: str,
-            path_mart_users_src: str,
-            deep_days: int) -> pyspark.sql.DataFrame:
+                      path_events_src: str, path_cities_src: str,
+                      path_mart_users_src: str,
+                      deep_days: int) -> pyspark.sql.DataFrame:
     """
     Возвращает DataFrame, в котором каждому событию сопоставлен
     ближайший город (city, zone_id).
@@ -104,8 +111,8 @@ def makeDfEventsSheet(spark: pyspark.sql.SparkSession,
         # print(events_pathes[0] + "..." + events_pathes[-1])
 
         df_events = spark.read \
-                        .option("basePath", path_events_src) \
-                        .parquet(*events_pathes)
+                         .option("basePath", path_events_src) \
+                         .parquet(*events_pathes)
     else:
         # в варианте под работающий (!) spark-submit --master yarn
         # передаём в deep_days 0 (ноль)
@@ -203,11 +210,11 @@ def main():
     для теста вполне норм работает 66 например (но это на sample(0.05)).
     """
 
-    path_events_src = sys.argv[1] # '/user/sergeibara/data/geo/events'
-    path_cities_src = sys.argv[2] # '/user/sergeibara/data/geo/cities'
-    path_mart_users_src = sys.argv[3] # '/user/sergeibara/analytics/mart_users'
-    deep_days = int(sys.argv[4]) # 66
-    path_target = sys.argv[5] # '/user/sergeibara/analytics/mart_zones'
+    path_events_src = sys.argv[1]  # '/user/sergeibara/data/geo/events'
+    path_cities_src = sys.argv[2]  # '/user/sergeibara/data/geo/cities'
+    path_mart_users_src = sys.argv[3]  # '/user/sergeibara/analytics/mart_users'
+    deep_days = int(sys.argv[4])  # 66
+    path_target = sys.argv[5]  # '/user/sergeibara/analytics/mart_zones'
 
     log.info("main: '{}', '{}', '{}', '{}', '{}'".format(
         path_events_src, path_cities_src, path_mart_users_src,
@@ -215,10 +222,7 @@ def main():
     ))
 
     spark_app_name = f"mart_fill_zones_{deep_days}"
-    # .master("yarn") \
-    # .master("local[8]") \
-    # .master("local") \
-    # NB: в spark-submit-версии master задаётся при отправке файла
+    # NB: в spark-submit master задаётся при отправке файла
     spark = SparkSession.builder \
         .config("spark.driver.memory", "2g") \
         .config("spark.driver.cores", 2) \
@@ -226,10 +230,7 @@ def main():
         .getOrCreate()
 
     dfEventsSheet = makeDfEventsSheet(spark, path_events_src,
-                    path_cities_src, path_mart_users_src, deep_days)
-
-    # TODO: ккак-то научиться пихать это в pivot()
-    # dfEventTypes = dfEventsSheet.select("event_type").distinct()
+                                      path_cities_src, path_mart_users_src, deep_days)
 
     window_month = Window.partitionBy("zone_id", "month")
     dfMart = dfEventsSheet \
@@ -256,11 +257,6 @@ def main():
     dfMart.write \
         .mode("overwrite") \
         .parquet(path_target)
-
-    # dfTestRead = spark.read.parquet(path_target)
-    # print("dfTestRead")
-    # dfTestRead.show()
-    # dfTestRead.printSchema()
 
 
 if __name__ == "__main__":

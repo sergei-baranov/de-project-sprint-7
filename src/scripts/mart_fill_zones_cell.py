@@ -1,6 +1,6 @@
 # mart_fill_zones_cell.py
 # NB: в spark-submit версии прописать комментами тут запуск из консоли
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 import os
 os.environ['HADOOP_CONF_DIR'] = '/etc/hadoop/conf'
 os.environ['YARN_CONF_DIR'] = '/etc/hadoop/conf'
@@ -8,7 +8,6 @@ os.environ['YARN_CONF_DIR'] = '/etc/hadoop/conf'
 # os.environ['SPARK_HOME'] ='/usr/lib/spark'
 # os.environ['PYTHONPATH'] ='/usr/local/lib/python3.8'
 
-import sys
 import findspark
 findspark.init()
 findspark.find()
@@ -19,7 +18,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import * 
 from pyspark.sql.window import Window
 import pyspark.sql.functions as F
-from pyspark import SparkFiles
 
 
 def generate_dates_increase(date, depth, base_path):
@@ -35,9 +33,9 @@ def input_paths(date, depth, base_path):
 
 
 def makeDfEventsSheet(spark: pyspark.sql.SparkSession,
-            path_events_src: str, path_cities_src: str,
-            path_mart_users_src: str,
-            deep_days: int) -> pyspark.sql.DataFrame:
+                      path_events_src: str, path_cities_src: str,
+                      path_mart_users_src: str,
+                      deep_days: int) -> pyspark.sql.DataFrame:
     """
     Возвращает DataFrame, в котором каждому событию сопоставлен
     ближайший город (city, zone_id).
@@ -76,8 +74,8 @@ def makeDfEventsSheet(spark: pyspark.sql.SparkSession,
         print(events_pathes[0] + "..." + events_pathes[-1])
 
         df_events = spark.read \
-                        .option("basePath", path_events_src) \
-                        .parquet(*events_pathes)
+                         .option("basePath", path_events_src) \
+                         .parquet(*events_pathes)
     else:
         # в варианте под работающий (!) spark-submit --master yarn
         # передаём в deep_days 0 (ноль)
@@ -100,7 +98,10 @@ def makeDfEventsSheet(spark: pyspark.sql.SparkSession,
             'diff',
             F.when(
                 (df_events.lat.isNotNull() & df_events.lon.isNotNull()),
-                F.acos(F.sin(df_cities.lat)*F.sin(df_events.lat) + F.cos(df_cities.lat)*F.cos(df_events.lat)*F.cos(df_cities.lng-df_events.lon)) * F.lit(6371)
+                F.acos(
+                    F.sin(df_cities.lat) * F.sin(df_events.lat)
+                    + F.cos(df_cities.lat) * F.cos(df_events.lat) * F.cos(df_cities.lng-df_events.lon)
+                ) * F.lit(6371)
             ).otherwise(F.lit(None))
         ) \
         .withColumn('event_city', F.first('city', False).over(window_city)) \
@@ -124,7 +125,8 @@ def makeDfEventsSheet(spark: pyspark.sql.SparkSession,
             "registration"
         ) \
         .join(df_users, "user_id", "left") \
-        .withColumn("city", 
+        .withColumn(
+            "city",
             F.when(
                 F.col("event_city").isNull(),
                 F.col("act_city")
@@ -185,17 +187,14 @@ def main():
     для теста вполне норм работает 66 например (но это на sample(0.05)).
     """
     # NB: в spark-submit версии вернуть параметризацию из аргументов запуска
-    path_events_src = '/user/sergeibara/data/geo/events' # sys.argv[1]
-    path_cities_src = '/user/sergeibara/data/geo/cities' # sys.argv[2]
-    path_mart_users_src = '/user/sergeibara/analytics/mart_users' # sys.argv[3]
-    deep_days = 66 # int(sys.argv[4])
-    path_target = '/user/sergeibara/analytics/mart_zones' # sys.argv[5]
+    path_events_src = '/user/sergeibara/data/geo/events'  # sys.argv[1]
+    path_cities_src = '/user/sergeibara/data/geo/cities'  # sys.argv[2]
+    path_mart_users_src = '/user/sergeibara/analytics/mart_users'  # sys.argv[3]
+    deep_days = 66  # int(sys.argv[4])
+    path_target = '/user/sergeibara/analytics/mart_zones'  # sys.argv[5]
 
     spark_app_name = f"mart_fill_zones_cell_{deep_days}"
-    # .master("yarn") \
-    # .master("local[8]") \
-    # .master("local") \
-    # NB: в spark-submit-версии master задастся при отправке файла
+
     spark = SparkSession.builder \
         .master("local[8]") \
         .config("spark.driver.memory", "2g") \
@@ -204,7 +203,7 @@ def main():
         .getOrCreate()
 
     dfEventsSheet = makeDfEventsSheet(spark, path_events_src,
-                    path_cities_src, path_mart_users_src, deep_days)
+                                      path_cities_src, path_mart_users_src, deep_days)
     print("dfEventsSheet")
     dfEventsSheet.show()
     dfEventsSheet.printSchema()
